@@ -1,4 +1,6 @@
-﻿#include "pch.h"
+﻿// dllmain.cpp : 定义 DLL 应用程序的入口点。
+#include "pch.h"
+
 #include <iostream>
 #include <windows.h>
 #include <string>
@@ -176,7 +178,7 @@ static bool isMajorMonth(int lunarYear, int lunarMonth) {
 static const char* getCyclicalString(int cyclicalNumber) {
     std::stringstream ss;
     ss << tianganString[getTiangan(cyclicalNumber)] << dizhiString[getDizhi(cyclicalNumber)];
-    return _strdup(ss.str().c_str());
+    return ss.str().c_str();
 }
 
 /**
@@ -194,7 +196,7 @@ static const char* getLunarYearString(int lunarYear) {
  * @return 农历月份字符串 (例:正)
  */
 static const char* getLunarMonthString(int lunarMonth) {
-    const char* lunarMonthString = {};
+    static const char* lunarMonthString = {};
     if (lunarMonth == 1) {
         lunarMonthString = lunarString2[3];
     }
@@ -207,9 +209,9 @@ static const char* getLunarMonthString(int lunarMonth) {
     else if (lunarMonth % 10 > 0) {
         lunarMonthString = lunarString1[lunarMonth % 10];
     }
-    std::stringstream ss;
-    ss << lunarMonthString;
-    return _strdup(ss.str().c_str());
+    static std::string lunarMonthStringReturn;
+    lunarMonthStringReturn = lunarMonthString;
+    return lunarMonthStringReturn.c_str();
 }
 
 /**
@@ -231,9 +233,10 @@ static const char* getLunarDayString(int lunarDay) {
         lunarDayString2 = lunarString2[1];
         lunarDayString1 = lunarString1[i1];
     }
-    std::stringstream ss;
-    ss << lunarDayString1 << lunarDayString2;
-    return _strdup(ss.str().c_str());
+    static std::string lunarDayStringReturn;
+    lunarDayStringReturn = lunarDayString1;
+    lunarDayStringReturn += lunarDayString2;
+    return lunarDayStringReturn.c_str();
 }
 
 /**
@@ -281,7 +284,7 @@ static long UTC(int y, int m, int d, int h, int min, int sec) {
     input.tm_sec = sec;
 
     // 设置 1970-1-2
-    struct tm base = { 0 };
+    static struct tm base = { 0 };
     base.tm_year = 1970 - 1900;   // 1970 年
     base.tm_mon = 0;             // 1 月（从 0 开始）
     base.tm_mday = 2;
@@ -503,88 +506,89 @@ extern "C" __declspec(dllexport) int GetDizhiDay() {
  * 返回农历年字符串
  * @return 农历年字符串
  */
-extern "C" __declspec(dllexport) char* GetLunarYearString() {
-    std::stringstream ss;
-    ss << getLunarYearString(lunarYear);
-    return _strdup(ss.str().c_str());
+extern "C" __declspec(dllexport) const char* GetLunarYearString() {
+    static std::string lunarYearReturn;
+    lunarYearReturn = getLunarYearString(lunarYear);
+    return lunarYearReturn.c_str();
 }
 
 /**
  * 返回农历月字符串
  * @return 农历月字符串
  */
-extern "C" __declspec(dllexport) char* GetLunarMonthString() {
-    std::stringstream ss;
-    ss << (isLeapMonth ? lunarString2[6] : "") << getLunarMonthString(lunarMonth);
-    return _strdup(ss.str().c_str());
+extern "C" __declspec(dllexport) const char* GetLunarMonthString() {
+    static std::string lunarMonthReturn;
+    lunarMonthReturn = (isLeapMonth ? lunarString2[6] : "");
+    lunarMonthReturn += getLunarMonthString(lunarMonth);
+    return lunarMonthReturn.c_str();
 }
 
 /**
  * 返回农历日字符串
  * @return 农历日字符串
  */
-extern "C" __declspec(dllexport) char* GetLunarDayString() {
-    std::stringstream ss;
-    ss << getLunarDayString(lunarDay);
-    return _strdup(ss.str().c_str());
+extern "C" __declspec(dllexport) const char* GetLunarDayString() {
+    static std::string lunarDayReturn;
+    lunarDayReturn = getLunarDayString(lunarDay);
+    return lunarDayReturn.c_str();
 }
 
 /**
  * 取农历年生肖
  * @return 农历年生肖(例:龙)
  */
-extern "C" __declspec(dllexport) char* GetAnimalString() {
-    std::stringstream ss;
-    ss << animalsString[(lunarYear - 4) % 12];
-    return _strdup(ss.str().c_str());
+extern "C" __declspec(dllexport) const char* GetAnimalString() {
+    static std::string animalsStringReturn;
+    animalsStringReturn = animalsString[(lunarYear - 4) % 12];
+    return animalsStringReturn.c_str();
 }
 
 /**
  * 取得干支年字符串
  * @return 干支年字符串
  */
-extern "C" __declspec(dllexport) char* GetCyclicaYear() {
-    std::stringstream ss;
-    ss << getCyclicalString(cyclicalYear);
-    return _strdup(ss.str().c_str());
+extern "C" __declspec(dllexport) const char* GetCyclicaYear() {
+    static std::string cyclicalYearReturn;
+    cyclicalYearReturn = getCyclicalString(cyclicalYear);
+    return cyclicalYearReturn.c_str();
 }
 
 /**
  * 取得干支月字符串
  * @return 干支月字符串
  */
-extern "C" __declspec(dllexport) char* GetCyclicaMonth() {
-    std::stringstream ss;
-    ss << getCyclicalString(cyclicalMonth);
-    return _strdup(ss.str().c_str());
+extern "C" __declspec(dllexport) const char* GetCyclicaMonth() {
+    static std::string cyclicalMonthReturn;
+    cyclicalMonthReturn = getCyclicalString(cyclicalMonth);
+    return cyclicalMonthReturn.c_str();
 }
 
 /**
  * 取得干支日字符串
  * @return 干支日字符串
  */
-extern "C" __declspec(dllexport) char* GetCyclicaDay() {
-    std::stringstream ss;
-    ss << getCyclicalString(cyclicalDay);
-    return _strdup(ss.str().c_str());
+extern "C" __declspec(dllexport) const char* GetCyclicaDay() {
+    static std::string cyclicalDayReturn;
+    cyclicalDayReturn = getCyclicalString(cyclicalDay);
+    return cyclicalDayReturn.c_str();
 }
 
 /**
  * 返回公历日期的节气字符串
  * @return 二十四节气字符串,若不是节气日,返回空串(例:冬至)
  */
-extern "C" __declspec(dllexport) char* GetTermString() {
+extern "C" __declspec(dllexport) const char* GetTermString() {
     // 二十四节气
-    const char* termString = "";
+    static const char* termString = "";
     if (getSolarTermDay(solarYear, solarMonth * 2) == solarDay) {
         termString = solarTermString[solarMonth * 2];
     }
     else if (getSolarTermDay(solarYear, solarMonth * 2 + 1) == solarDay) {
         termString = solarTermString[solarMonth * 2 + 1];
     }
-    std::stringstream ss;
-    ss << termString;
-    return _strdup(ss.str().c_str());
+    static std::string termStringReturn;
+    termStringReturn = termString;
+    return termStringReturn.c_str();
 }
 
 /**
@@ -612,8 +616,70 @@ extern "C" __declspec(dllexport) void InitTimeSet(int year, int month, int day) 
     lunarCalculate();
 }
 
+/**
+ * 返回格式化后的日期字符串
+ * @param format 格式化字符串，例如 "YY年MM月DD日 yy mm dd TT"
+ * 支持的占位符包括：
+ * - YY：干支年份（例如：甲子）
+ * - MM：干支月份（例如：庚子）
+ * - DD：干支日（例如：戊戌）
+ * - yy：生肖（例如：鼠）
+ * - mm：农历月份（例如：正、腊、二）
+ * - dd：农历日（例如：初一）
+ * - TT：节气（例如：立春）
+ * @return 格式化后的日期字符串，调用者需要负责释放返回的内存（使用 free() 函数）
+ */
+extern "C" __declspec(dllexport) const char* GetFormattedString(const char* format) {
+    std::string formattedString = format; // 将输入的格式化字符串复制到 std::string 对象中
+    size_t pos; // 用于存储占位符在字符串中的位置
 
-// dllmain.cpp : 定义 DLL 应用程序的入口点。
+    // 替换 YY (农历年份)
+    pos = formattedString.find("YY");
+    if (pos != std::string::npos) {
+        formattedString.replace(pos, 2, GetCyclicaYear()); // 调用 GetCyclicaYear() 函数获取农历年份，并替换占位符
+    }
+
+    // 替换 MM (农历月份)
+    pos = formattedString.find("MM");
+    if (pos != std::string::npos) {
+        formattedString.replace(pos, 2, GetCyclicaMonth()); // 调用 GetCyclicaMonth() 函数获取农历月份，并替换占位符
+    }
+
+    // 替换 DD (农历日)
+    pos = formattedString.find("DD");
+    if (pos != std::string::npos) {
+        formattedString.replace(pos, 2, GetCyclicaDay()); // 调用 GetCyclicaDay() 函数获取农历日，并替换占位符
+    }
+
+    // 替换 yy (生肖)
+    pos = formattedString.find("yy");
+    if (pos != std::string::npos) {
+        formattedString.replace(pos, 2, GetAnimalString()); // 调用 GetAnimalString() 函数获取生肖，并替换占位符
+    }
+
+    // 替换 mm (农历月份的中文表示)
+    pos = formattedString.find("mm");
+    if (pos != std::string::npos) {
+        formattedString.replace(pos, 2, GetLunarMonthString()); // 调用 GetLunarMonthString() 函数获取农历月份的中文表示，并替换占位符
+    }
+
+    // 替换 dd (农历日的中文表示)
+    pos = formattedString.find("dd");
+    if (pos != std::string::npos) {
+        formattedString.replace(pos, 2, GetLunarDayString()); // 调用 GetLunarDayString() 函数获取农历日的中文表示，并替换占位符
+    }
+
+    // 替换 TT (农历节气)
+    pos = formattedString.find("TT");
+    if (pos != std::string::npos) {
+        formattedString.replace(pos, 2, GetTermString()); // 调用 GetTermString() 函数获取农历节气，并替换占位符
+    }
+
+    static std::string formattedStringReturn;
+    formattedStringReturn = formattedString;
+    return formattedStringReturn.c_str();
+}
+
 static BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
