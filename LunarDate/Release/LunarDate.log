@@ -1,0 +1,14 @@
+﻿  pch.cpp
+  dllmain.cpp
+E:\repos\LunarDate\dllmain.cpp(252,18): warning C4244: “初始化”: 从“double”转换到“__int64”，可能丢失数据
+  (编译源文件“/dllmain.cpp”)
+  
+E:\repos\LunarDate\dllmain.cpp(596,22): warning C4008: “DllMain”: 忽略了“static”特性
+  (编译源文件“/dllmain.cpp”)
+  
+    正在创建库 E:\repos\LunarDate\Release\LunarDate.lib 和对象 E:\repos\LunarDate\Release\LunarDate.exp
+  正在生成代码
+  Previous IPDB not found, fall back to full compilation.
+  All 157 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  已完成代码的生成
+  LunarDate.vcxproj -> E:\repos\LunarDate\Release\LunarDate.dll
