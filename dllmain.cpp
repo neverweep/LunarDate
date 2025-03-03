@@ -1,5 +1,4 @@
-﻿// dllmain.cpp : 定义 DLL 应用程序的入口点。
-#include "pch.h"
+﻿#include "pch.h"
 #include <iostream>
 #include <windows.h>
 #include <string>
@@ -82,8 +81,12 @@ static const char* solarTermString[]{
 
 
 
-
 //内部函数
+/**
+* 返回农历年闰月月份
+* @param lunarYear 指定农历年份(数字)
+* @return 该农历年闰月的月份(数字,没闰返回0)
+*/
 static int getLunarLeapMonth(int lunarYear) {
     // 数据表中,每个农历年用16bit来表示,
     // 前12bit分别表示12个月份的大小月,最后4bit表示闰月
@@ -95,10 +98,8 @@ static int getLunarLeapMonth(int lunarYear) {
 
 /**
 * 返回农历年正常月份的总天数
-* @param lunarYear
-*            指定农历年份(数字)
-* @param lunarMonth
-*            指定农历月份(数字)
+* @param lunarYear 指定农历年份(数字)
+* @param lunarMonth 指定农历月份(数字)
 * @return 该农历年闰月的月份(数字,没闰返回0)
 */
 static int getLunarMonthDays(int lunarYear, int lunarMonth) {
@@ -110,7 +111,6 @@ static int getLunarMonthDays(int lunarYear, int lunarMonth) {
 
 /**
 * 返回农历年闰月的天数
-*
 * @param lunarYear 指定农历年份(数字)
 * @return 该农历年闰月的天数(数字)
 */
@@ -160,10 +160,10 @@ static int getTiangan(int cyclicalNumber) {
 }
 
 /**
-   * 返回此月大小月信息
-   * @param lunarYear, lunarMonth
-   * @return 大月为 true，小月为 false
-   */
+ * 返回此月大小月信息
+ * @param lunarYear, lunarMonth
+ * @return 大月为 true，小月为 false
+ */
 static bool isMajorMonth(int lunarYear, int lunarMonth) {
     return getLunarMonthDays(lunarYear, lunarMonth) == 30;
 }
@@ -221,18 +221,18 @@ static const char* getLunarDayString(int lunarDay) {
     if (lunarDay < 1 || lunarDay>30) return "";
     int i1 = lunarDay / 10;
     int i2 = lunarDay % 10;
-    const char* c1 = lunarString2[i1];
-    const char* c2 = lunarString1[i2];
+    const char* lunarDayString1 = lunarString2[i1];
+    const char* lunarDayString2 = lunarString1[i2];
     if (lunarDay < 11) {
-        c1 = lunarString2[0];
-        if (i2 == 0) c2 = lunarString2[1];
+        lunarDayString1 = lunarString2[0];
+        if (i2 == 0) lunarDayString2 = lunarString2[1];
     }
     else if (i2 == 0) {
-        c2 = lunarString2[1];
-        c1 = lunarString1[i1];
+        lunarDayString2 = lunarString2[1];
+        lunarDayString1 = lunarString1[i1];
     }
     std::stringstream ss;
-    ss << c1 << c2;
+    ss << lunarDayString1 << lunarDayString2;
     return _strdup(ss.str().c_str());
 }
 
@@ -244,7 +244,7 @@ static const char* getLunarDayString(int lunarDay) {
  */
 static int getSolarTermDay(int solarYear, int index) {
     // 使用 long long 避免溢出
-    long long baseTime = 2208549300000LL;  // 1900-01-06 02:05:00 UTC（毫秒）
+    long long baseTime = 2208549300000LL;  // 1900-01-06 02:05:00 （毫秒）
     double yearOffset = 31556925974.7 * (solarYear - 1900);  // 精确计算
     long long indexOffset = solarTermInfo[index] * 60000LL;  // 转换为毫秒
 
@@ -296,9 +296,96 @@ static long UTC(int y, int m, int d, int h, int min, int sec) {
     return offset;
 }
 
+/**
+ * 计算农历和节气
+ */
+static void lunarCalculate() {
+    // 计算当前与1970年1月2日的天数差再加上1970年1月2日与1900年1月31日的天数差，转换为 long
+    long offset = UTC(solarYear, solarMonth + 1, solarDay, 0, 0, 0) / 86400 + 25538;
+
+    // 农历年数字
+    lunarYear = 1900;
+    int daysInLunarYear = getLunarYearDays(lunarYear);
+    while (lunarYear < 2100 && offset >= daysInLunarYear) {
+        offset -= daysInLunarYear;
+        daysInLunarYear = getLunarYearDays(++lunarYear);
+    }
+    // 按农历月递减每月的农历天数，确定农历月份
+    lunarMonth = 1;
+    // 所在农历年闰哪个月,若没有返回0
+    int leapMonth = getLunarLeapMonth(lunarYear);
+    // 是否闰年
+    bool isLeapYear = leapMonth > 0;
+    // 闰月是否递减
+    bool leapDec = false;
+    bool isLeapMonth = false;
+    int daysInLunarMonth = 0;
+    while (lunarMonth < 13 && offset>0) {
+        if (isLeapMonth && leapDec) { // 如果是闰年,并且是闰月
+            // 所在农历年闰月的天数
+            daysInLunarMonth = getLunarLeapDays(lunarYear);
+            leapDec = false;
+        }
+        else {
+            // 所在农历年指定月的天数
+            daysInLunarMonth = getLunarMonthDays(lunarYear, lunarMonth);
+        }
+        if (offset < daysInLunarMonth) {
+            break;
+        }
+        offset -= daysInLunarMonth;
+
+        if (leapMonth == lunarMonth && isLeapMonth == false) {
+            // 下个月是闰月
+            leapDec = true;
+            isLeapMonth = true;
+        }
+        else {
+            // 月份递增
+            lunarMonth++;
+        }
+    }
+    // 农历月数字
+    lunarMonth = lunarMonth;
+    // 是否闰月
+    isLeapMonth = (lunarMonth == leapMonth && isLeapMonth);
+    // 农历日数字
+    lunarDay = (int)offset + 1;
+    // 取得干支历
+
+
+    /**
+      * 取干支历 不是历年，历月干支，而是中国的从立春节气开始的节月，是中国的太阳十二宫，阳历的。
+     */
+
+     // 干支年1900年立春后为庚子年(60进制36)
+    int term2 = getSolarTermDay(solarYear, 2); // 立春日期
+    // 依节气调整二月分的年柱, 以立春为界
+    if (solarMonth < 1 || (solarMonth == 1 && solarDay < term2)) {
+        cyclicalYear = (solarYear - 1900 + 36 - 1) % 60;
+    }
+    else {
+        cyclicalYear = (solarYear - 1900 + 36) % 60;
+    }
+
+    // 干支月 1900年1月小寒以前为 丙子月(60进制12)
+    int firstNode = getSolarTermDay(solarYear, solarMonth * 2); // 传回当月「节」为几日开始
+    // 依节气月柱, 以「节」为界
+    if (solarDay <= firstNode) {
+        cyclicalMonth = ((solarYear - 1900) * 12 + solarMonth + 12) % 60;
+    }
+    else {
+        cyclicalMonth = ((solarYear - 1900) * 12 + solarMonth + 13) % 60;
+    }
+
+    // 当月一日与 1900/1/1 相差天数
+    // 1900/1/1与 1970/1/2 相差25568日, 1900/1/1 日柱为甲戌日(60进制10)
+    cyclicalDay = (int)(UTC(solarYear, solarMonth + 1, solarDay, 0, 0, 0) / 86400 + 25568 + 10) % 60;
+}
+
+
 
 //导出函数
-
 /**
  * 农历月是否是闰月
  * @return 农历月是否是闰月
@@ -500,99 +587,33 @@ extern "C" __declspec(dllexport) char* GetTermString() {
     return _strdup(ss.str().c_str());
 }
 
-
-extern "C" __declspec(dllexport) void Init() {
+/**
+ * 初始化当前日期
+ */
+extern "C" __declspec(dllexport) void InitTimeNow() {
     SYSTEMTIME st;
     GetLocalTime(&st);
     solarYear = st.wYear;
     solarMonth = st.wMonth - 1;
     solarDay = st.wDay;
+    lunarCalculate();
+}
 
-    // 计算当前与1970年1月2日的天数差再加上1970年1月2日与1900年1月31日的天数差，转换为 long
-    long offset = UTC(solarYear, solarMonth + 1, solarDay, 0, 0, 0) / 86400 + 25538;
-
-    // 农历年数字
-    lunarYear = 1900;
-    int daysInLunarYear = getLunarYearDays(lunarYear);
-    while (lunarYear < 2100 && offset >= daysInLunarYear) {
-        offset -= daysInLunarYear;
-        daysInLunarYear = getLunarYearDays(++lunarYear);
-    }
-    // 按农历月递减每月的农历天数，确定农历月份
-    lunarMonth = 1;
-    // 所在农历年闰哪个月,若没有返回0
-    int leapMonth = getLunarLeapMonth(lunarYear);
-    // 是否闰年
-    bool isLeapYear = leapMonth > 0;
-    // 闰月是否递减
-    bool leapDec = false;
-    bool isLeapMonth = false;
-    int daysInLunarMonth = 0;
-    while (lunarMonth < 13 && offset>0) {
-        if (isLeapMonth && leapDec) { // 如果是闰年,并且是闰月
-            // 所在农历年闰月的天数
-            daysInLunarMonth = getLunarLeapDays(lunarYear);
-            leapDec = false;
-        }
-        else {
-            // 所在农历年指定月的天数
-            daysInLunarMonth = getLunarMonthDays(lunarYear, lunarMonth);
-        }
-        if (offset < daysInLunarMonth) {
-            break;
-        }
-        offset -= daysInLunarMonth;
-
-        if (leapMonth == lunarMonth && isLeapMonth == false) {
-            // 下个月是闰月
-            leapDec = true;
-            isLeapMonth = true;
-        }
-        else {
-            // 月份递增
-            lunarMonth++;
-        }
-    }
-    // 农历月数字
-    lunarMonth = lunarMonth;
-    // 是否闰月
-    isLeapMonth = (lunarMonth == leapMonth && isLeapMonth);
-    // 农历日数字
-    lunarDay = (int)offset + 1;
-    // 取得干支历
-
-
-    /**
-      * 取干支历 不是历年，历月干支，而是中国的从立春节气开始的节月，是中国的太阳十二宫，阳历的。
-     */
-
-     // 干支年1900年立春后为庚子年(60进制36)
-    int term2 = getSolarTermDay(solarYear, 2); // 立春日期
-    // 依节气调整二月分的年柱, 以立春为界
-    if (solarMonth < 1 || (solarMonth == 1 && solarDay < term2)) {
-        cyclicalYear = (solarYear - 1900 + 36 - 1) % 60;
-    }
-    else {
-        cyclicalYear = (solarYear - 1900 + 36) % 60;
-    }
-
-    // 干支月 1900年1月小寒以前为 丙子月(60进制12)
-    int firstNode = getSolarTermDay(solarYear, solarMonth * 2); // 传回当月「节」为几日开始
-    // 依节气月柱, 以「节」为界
-    if (solarDay <= firstNode) {
-        cyclicalMonth = ((solarYear - 1900) * 12 + solarMonth + 12) % 60;
-    }
-    else {
-        cyclicalMonth = ((solarYear - 1900) * 12 + solarMonth + 13) % 60;
-    }
-
-    // 当月一日与 1900/1/1 相差天数
-    // 1900/1/1与 1970/1/2 相差25568日, 1900/1/1 日柱为甲戌日(60进制10)
-    cyclicalDay = (int)(UTC(solarYear, solarMonth + 1, solarDay, 0, 0, 0) / 86400 + 25568 + 10) % 60;
+/**
+ * 初始化指定日期
+ * @param year 指定年份
+ * @param month 指定月份
+ * @param day 指定日期
+ */
+extern "C" __declspec(dllexport) void InitTimeSet(int year, int month, int day) {
+    solarYear = year;
+    solarMonth = month - 1;
+    solarDay = day;
+    lunarCalculate();
 }
 
 
-
+// dllmain.cpp : 定义 DLL 应用程序的入口点。
 static BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
