@@ -390,6 +390,15 @@ static void lunarCalculate() {
 
 //导出函数
 /**
+ * 农历月大小月
+ * @return 大月为 true，小月为 false
+ */
+extern "C" __declspec(dllexport) bool IsMajorMonth() {
+    return getLunarMonthDays(lunarYear, lunarMonth) == 30;
+}
+
+
+/**
  * 农历月是否是闰月
  * @return 农历月是否是闰月
  */
@@ -579,7 +588,7 @@ extern "C" __declspec(dllexport) const char* GetCyclicaDay() {
  */
 extern "C" __declspec(dllexport) const char* GetTermString() {
     // 二十四节气
-    static const char* termString = "";
+    std::string termString = "";
     if (getSolarTermDay(solarYear, solarMonth * 2) == solarDay) {
         termString = solarTermString[solarMonth * 2];
     }
@@ -623,11 +632,11 @@ extern "C" __declspec(dllexport) void InitTimeSet(int year, int month, int day) 
  * - YY：干支年份（例如：甲子）
  * - MM：干支月份（例如：庚子）
  * - DD：干支日（例如：戊戌）
- * - yy：生肖（例如：鼠）
+ * - AA：生肖（例如：鼠）
  * - mm：农历月份（例如：正、腊、二）
  * - dd：农历日（例如：初一）
  * - TT：节气（例如：立春）
- * @return 格式化后的日期字符串，调用者需要负责释放返回的内存（使用 free() 函数）
+ * @return 格式化后的日期字符串
  */
 extern "C" __declspec(dllexport) const char* GetFormattedString(const char* format) {
     std::string formattedString = format; // 将输入的格式化字符串复制到 std::string 对象中
@@ -651,8 +660,8 @@ extern "C" __declspec(dllexport) const char* GetFormattedString(const char* form
         formattedString.replace(pos, 2, GetCyclicaDay()); // 调用 GetCyclicaDay() 函数获取农历日，并替换占位符
     }
 
-    // 替换 yy (生肖)
-    pos = formattedString.find("yy");
+    // 替换 AA (生肖)
+    pos = formattedString.find("AA");
     if (pos != std::string::npos) {
         formattedString.replace(pos, 2, GetAnimalString()); // 调用 GetAnimalString() 函数获取生肖，并替换占位符
     }
